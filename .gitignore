@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.npm-cache/
+.repo-audit/
+*.log
+
+# Local reference/review material and supplied source archive
+/my_portofolio-master.zip
+/1000413219.mp4
+/reference-sheet.jpg
+/review-*.png
