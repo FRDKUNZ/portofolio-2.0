@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Script from "next/script";
 import { ArrowDown, ArrowRight, ArrowUpRight, Github, Instagram, Menu, X, Youtube } from "lucide-react";
 import { gsap } from "gsap";
@@ -10,16 +10,9 @@ import Lenis from "@studio-freight/lenis";
 import { projects, filters, type Project } from "@/data/portfolio";
 import { contact, profile, services, skillGroups } from "@/data/site-content";
 import { motion } from "@/lib/animations";
-import { CollaborativeAnimationController, revealAllDesignTargets } from "@/lib/collaborative-design";
+import { SwarmReconstruction, revealAllDesignTargets } from "@/lib/swarm-reconstruction";
 
 gsap.registerPlugin(ScrollTrigger, Flip);
-const designers = [
-  { id: "alex", name: "Alex · UI", color: "#57b8ff" },
-  { id: "sarah", name: "Sarah · Motion", color: "#c58cff" },
-  { id: "daniel", name: "Daniel · Visuals", color: "#70d99b" },
-  { id: "michael", name: "Michael · Layout", color: "#ffad66" },
-  { id: "emma", name: "Emma · Direction", color: "#ff7fa7" },
-] as const;
 const allSkills = skillGroups.flatMap((group) => group.tools);
 const categoryLabels: Record<string, string> = { design: "Desain Grafis", video: "Video Editing", code: "Pemrograman" };
 
@@ -44,9 +37,9 @@ export default function Home() {
     lenis.on("scroll", ScrollTrigger.update);
     gsap.ticker.lagSmoothing(0);
 
-    let controller: CollaborativeAnimationController | undefined;
+    let controller: SwarmReconstruction | undefined;
     if (reducedMotion) revealAllDesignTargets();
-    else { controller = new CollaborativeAnimationController(lenis); void controller.play(); }
+    else { controller = new SwarmReconstruction(lenis); void controller.play(); }
     return () => { controller?.destroy(); cancelAnimationFrame(frame); lenis.destroy(); };
   }, []);
 
@@ -161,6 +154,5 @@ export default function Home() {
 
     {selectedProject && <div className="project-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedProject(null); }}><div className="project-modal-panel" role="dialog" aria-modal="true" aria-labelledby="project-modal-title"><button className="project-modal-close" type="button" aria-label="Tutup detail proyek" onClick={() => setSelectedProject(null)}><X size={18}/></button><p className="eyebrow">{categoryLabels[selectedProject.category]} / {selectedProject.year}</p><h2 id="project-modal-title">{selectedProject.title.id}</h2><p className="project-modal-description">{selectedProject.description.id}</p><div className="project-modal-tags">{selectedProject.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="project-modal-gallery">{selectedProject.media.map((media) => media.type === "video" ? <video key={media.src} src={media.src} controls playsInline preload="metadata" /> : <img key={media.src} src={media.src} alt={media.caption} loading="lazy" style={{ objectFit: media.fit ?? "cover" }}/>)}</div>{selectedProject.link && <a className="text-link" href={selectedProject.link} target="_blank" rel="noreferrer">BUKA PROYEK <ArrowUpRight size={14}/></a>}</div></div>}
 
-    <div className="collaborator-overlay" aria-hidden="true">{designers.map((designer) => <div className="designer-layer" key={designer.id} style={{ "--designer-color": designer.color } as CSSProperties}><div className="designer-selection" data-designer={designer.id}><svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M1 1H99V99H1Z"/></svg><i className="selection-handle h1"/><i className="selection-handle h2"/><i className="selection-handle h3"/><i className="selection-handle h4"/><span className="selection-measure"/></div><div className="designer-cursor" data-designer={designer.id}><svg viewBox="0 0 24 28"><path d="M2 1v22l6-6 4 9 4-2-4-8h8L2 1Z"/><path className="pointer-edge" d="M2 1v22l6-6 4 9 4-2-4-8h8L2 1Z"/></svg><span className="cursor-label">{designer.name}</span></div></div>)}</div>
   </main>;
 }
