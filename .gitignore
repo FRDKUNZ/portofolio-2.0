@@ -3,6 +3,7 @@ node_modules/
 .npm-cache/
 .repo-audit/
 *.log
+*.tsbuildinfo
 
 # Local reference/review material and supplied source archive
 /my_portofolio-master.zip

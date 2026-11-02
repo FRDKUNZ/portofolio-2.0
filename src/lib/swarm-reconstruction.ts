@@ -99,6 +99,7 @@ type BlueprintItem = {
   node?: HTMLDivElement;
   finalEl?: HTMLElement;
   placeholder?: HTMLElement;
+  instant?: BlueprintItem[];
 };
 
 type ReconstructionTask = {
@@ -367,7 +368,7 @@ export class SwarmReconstruction {
     this.listen();
     try {
       this.blank.classList.add("on");
-      await sleep(this.reduced ? 80 : 620);
+      await sleep(this.reduced ? 60 : 180);
       if (this.cancelled) return;
       await this.primeAssets();
       if (this.cancelled) return;
@@ -447,29 +448,12 @@ export class SwarmReconstruction {
 
   private async primeAssets() {
     if (this.reduced) return;
-    const height = Math.max(document.documentElement.scrollHeight, window.innerHeight);
-    const step = Math.max(320, window.innerHeight * 0.82);
-    const original = window.scrollY;
-    for (let y = 0; y < height; y += step) {
-      window.scrollTo(0, y);
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      if (this.cancelled) return;
-    }
-    window.scrollTo(0, 0);
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const images = Array.from(document.querySelectorAll<HTMLImageElement>("main img, main video"));
+    await Promise.race([document.fonts?.ready ?? Promise.resolve(), sleep(400)]);
+    const images = Array.from(document.querySelectorAll<HTMLImageElement>("main img"));
     await Promise.race([
-      Promise.all(
-        images.map((el) => {
-          if (el instanceof HTMLImageElement) return el.decode().catch(() => undefined);
-          return Promise.resolve();
-        }),
-      ),
-      sleep(5000),
+      Promise.all(images.slice(0, 24).map((el) => el.decode().catch(() => undefined))),
+      sleep(600),
     ]);
-    await Promise.race([document.fonts?.ready ?? Promise.resolve(), sleep(4000)]);
-    window.scrollTo(0, original);
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   }
 
   /* ---------------------------------------------------------------- snapshot */
@@ -594,7 +578,7 @@ export class SwarmReconstruction {
         const boxStyle: Record<string, string> = {};
         for (const prop of BOX_PROPS) boxStyle[prop] = cs.getPropertyValue(prop);
         const box = add({ kind: "rect", el, rect, fixed, parentId, depth, style: boxStyle });
-        emitLines(el, cs, rect, fixed, parentId, depth);
+        emitLines(el, cs, rect, fixed, box.id, depth);
         if (textLike) {
           this.emitText(add, el, cs, rect, fixed, box.id, depth, textContent, false);
         } else {
@@ -715,9 +699,13 @@ export class SwarmReconstruction {
     for (const item of this.items) {
       if (item.groupRole === "copy") continue;
       const parent = item.parentId == null ? undefined : this.items[item.parentId];
-      const deps = parent?.task ? [parent.task] : [];
+      const instant = !!parent?.task && (item.kind === "line" || (item.kind === "text" && (item.fontSize || 0) < 10));
+      if (instant && parent) {
+        (parent.instant ?? (parent.instant = [])).push(item);
+        continue;
+      }
       const kind: TaskKind = item.kind === "image" || item.kind === "media" ? "image" : item.kind === "line" ? "line" : item.kind === "text" ? "text" : "rect";
-      item.task = make(kind, item.rect.y, { item, deps });
+      item.task = make(kind, item.rect.y, { item });
     }
 
     for (const group of this.groups) {
@@ -847,6 +835,8 @@ export class SwarmReconstruction {
             const img = document.createElement("img");
             img.src = item.src;
             img.alt = item.alt || "";
+            img.loading = "lazy";
+            img.decoding = "async";
             img.style.objectFit = item.fit || "cover";
             if (item.style?.["border-radius"]) img.style.borderRadius = item.style["border-radius"];
             finalEl.appendChild(img);
@@ -1304,7 +1294,7 @@ export class SwarmReconstruction {
     this.stopIdle(c);
     if (!wasWorking) c.activity = "moving";
     c.moving = true;
-    const duration = (opts.duration ?? clamp(0.16 + Math.sqrt(dist) * 0.024, 0.16, 0.85)) / ((opts.speed || 1) * c.personality.travelSpeed);
+    const duration = (opts.duration ?? clamp(0.05 + Math.sqrt(dist) * 0.008, 0.05, 0.28)) / ((opts.speed || 1) * c.personality.travelSpeed);
     const defaultBend = c.personality.bend * (Math.random() < 0.5 ? -1 : 1);
     const bend = (opts.bend ?? defaultBend) * Math.min(dist, 600);
     if (dist < 1) {
@@ -1363,7 +1353,7 @@ export class SwarmReconstruction {
 
   private async click(c: SwarmCursor) {
     c.press = 1;
-    await sleep(65);
+    await sleep(20);
   }
 
   private screenPoint(item: BlueprintItem, local?: Vec2): Vec2 {
@@ -1411,7 +1401,7 @@ export class SwarmReconstruction {
   /* -------------------------------------------------------------------- intro */
 
   private async intro() {
-    const duration = this.reduced ? 0.25 : 1.15;
+    const duration = this.reduced ? 0.25 : 0.6;
     const target = () => ({ x: window.innerWidth * 0.5, y: window.innerHeight * 0.46 });
     const start = performance.now();
     this.cursors.forEach((c) => { c.el.style.opacity = "1"; });
@@ -1431,7 +1421,7 @@ export class SwarmReconstruction {
         y: window.innerHeight * (0.2 + (row / Math.max(1, rows - 1)) * 0.58),
       };
     });
-    await Promise.all(this.cursors.map((c, i) => this.moveTo(c, points[i], { duration: 0.55, bend: 0 })));
+    await Promise.all(this.cursors.map((c, i) => this.moveTo(c, points[i], { duration: 0.28, bend: 0 })));
   }
 
   private async flockLoop(duration: number, target: Vec2 | (() => Vec2), scale: number, shrinking: boolean) {
@@ -1525,47 +1515,47 @@ export class SwarmReconstruction {
   /* -------------------------------------------------------------------- build */
 
   private async build() {
-    this.cursors.forEach((cursor, index) => this.beginIdle(cursor, 60 + index * 110));
-    const remaining = [...this.tasks];
-    const maxSteps = 400;
-    let steps = 0;
-    while (!this.cancelled && remaining.some((task) => task.state !== "done") && steps++ < maxSteps) {
-      const pending = remaining.filter((task) => task.state === "wait");
-      if (!pending.length) break;
-      const minY = Math.min(...pending.map((task) => task.y));
-      const band = pending.filter((task) => task.y < minY + 860);
+    this.cursors.forEach((cursor, index) => this.beginIdle(cursor, 20 + index * 45));
+    const pending = [...this.tasks];
+    const workers = this.cursors.length;
+    const deadline = performance.now() + (this.mobile ? 14000 : 18000);
+    let guard = 0;
+    while (!this.cancelled && performance.now() < deadline && pending.some((task) => task.state !== "done") && guard++ < 1200) {
+      const waiting = pending.filter((task) => task.state === "wait");
+      if (!waiting.length) {
+        await sleep(30);
+        continue;
+      }
+      let ready = waiting.filter((task) => task.deps.every((dep) => dep.state === "done"));
+      if (!ready.length) {
+        for (const task of waiting) task.deps = task.deps.filter((dep) => dep.state === "done");
+        ready = waiting.filter((task) => task.deps.every((dep) => dep.state === "done"));
+        if (!ready.length) {
+          for (const task of waiting) task.deps = [];
+          ready = waiting;
+        }
+      }
+      ready.sort((a, b) => a.y - b.y);
+      const minY = ready[0].y;
+      let limit = 900;
+      let band = ready.filter((task) => task.y < minY + limit);
+      while (band.length < workers && limit < 3600) {
+        limit += 600;
+        band = ready.filter((task) => task.y < minY + limit);
+      }
       const isFixedBand = band.every((task) => task.item?.fixed);
       if (!isFixedBand) {
         const focus = Math.max(minY, ...band.map((task) => task.y)) * 0.5 + minY * 0.5;
         const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
         const target = clamp(focus - window.innerHeight * 0.42, 0, maxScroll);
-        if (Math.abs(target - window.scrollY) > 24) await this.scrollTo(target, 0.62);
+        if (Math.abs(target - window.scrollY) > 40) await this.scrollTo(target, 0.16);
         if (this.cancelled) return;
       }
-      await this.runBand(band);
+      const slice = band.slice(0, workers);
+      await Promise.all(slice.map((task) => this.runTask(task)));
     }
     if (!this.cancelled) {
-      await sleep(360);
-    }
-  }
-
-  private async runBand(band: ReconstructionTask[]) {
-    const remaining = band.filter((task) => task.state !== "done");
-    let guard = 0;
-    while (remaining.length && !this.cancelled && guard++ < 200) {
-      const ready = remaining.filter((task) => task.state === "wait" && task.deps.every((dep) => dep.state === "done"));
-      if (!ready.length) {
-        if (remaining.every((task) => task.state === "done")) break;
-        await sleep(80);
-        continue;
-      }
-      const workers = Math.min(this.cursors.length, this.mobile ? 5 : 10);
-      const slice = ready.slice(0, workers);
-      await Promise.all(slice.map((task) => this.runTask(task)));
-      for (const task of slice) {
-        const index = remaining.indexOf(task);
-        if (index >= 0) remaining.splice(index, 1);
-      }
+      await sleep(160);
     }
   }
 
@@ -1586,14 +1576,34 @@ export class SwarmReconstruction {
     } finally {
       task.state = "done";
       task.doneAt = this.time;
+      if (task.item) this.revealInstantChildren(task.item);
       cursor.task = null;
       cursor.activity = "idle-active";
       this.setShape(cursor, "arrow");
     }
-    await sleep(70);
+    await sleep(20);
     this.inviteCollaborator(cursor, task);
     if (!cursor.task && !cursor.moving) {
       this.beginIdle(cursor, rand(60, 300));
+    }
+  }
+
+  private revealInstantChildren(item: BlueprintItem) {
+    if (!item.instant) return;
+    for (const child of item.instant) {
+      if (child.kind === "text") {
+        this.revealText(child, child.totalChars || 0);
+        if (child.caret) child.caret.style.display = "none";
+      }
+      if (child.kind === "line") {
+        const path = child.node?.querySelector("path");
+        if (path) path.style.strokeDashoffset = "0";
+      }
+      if (child.node) child.node.style.opacity = "1";
+      if (child.kind === "rect" || child.kind === "image" || child.kind === "media") {
+        child.placeholder?.style.setProperty("opacity", "0");
+        child.finalEl?.classList.add("on");
+      }
     }
   }
 
@@ -1609,7 +1619,7 @@ export class SwarmReconstruction {
     await this.moveTo(c, endScreen, {
       drag: true,
       bend: 0,
-      speed: 0.82,
+      speed: 1.5,
       onStep: () => {
         const w = Math.max(0, c.x - start.x);
         const h = Math.max(0, c.y - start.y);
@@ -1618,7 +1628,7 @@ export class SwarmReconstruction {
     });
     ghost.update({ x: start.x, y: start.y, w: item.rect.w, h: item.rect.h }, `${Math.round(item.rect.w)} × ${Math.round(item.rect.h)}`);
     c.press = 0;
-    await sleep(90);
+    await sleep(20);
     if (item.kind === "rect") {
       item.placeholder?.style.setProperty("opacity", "0");
       item.finalEl?.classList.add("on");
@@ -1626,7 +1636,7 @@ export class SwarmReconstruction {
       item.placeholder?.style.setProperty("opacity", "0");
       item.finalEl?.classList.add("on");
     }
-    await sleep(isImage ? 380 : 240);
+    await sleep(isImage ? 90 : 50);
     ghost.remove();
     if (item.node) item.node.style.opacity = "1";
     this.setShape(c, "arrow");
@@ -1649,7 +1659,7 @@ export class SwarmReconstruction {
       await this.moveTo(c, { x: start.x + item.rect.w, y: start.y + lineH }, {
         drag: true,
         bend: 0,
-        speed: 0.95,
+        speed: 1.5,
         onStep: () => {
           const w = Math.max(0, c.x - start.x);
           const h = Math.max(0, c.y - start.y);
@@ -1664,13 +1674,13 @@ export class SwarmReconstruction {
     this.setShape(c, "ibeam");
     await this.moveTo(c, { x: start.x + rand(-16, 8), y: start.y + rand(8, 24) }, { speed: 1.4 });
     await this.typeText(c, item);
-    await sleep(100);
+    await sleep(25);
     if (item.grow && item.node) {
       const steps = [0.18, 0.26, 0.38, 0.5, 0.64, 0.78, 0.9, 1];
       const fs = item.fontSize || 40;
       for (const step of steps) {
         item.node.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${Math.max(step, 16 / fs)})`;
-        await sleep(55);
+        await sleep(15);
         if (this.cancelled) return;
       }
       item.node.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(1)`;
@@ -1680,14 +1690,14 @@ export class SwarmReconstruction {
     if (item.snapGuide) {
       const guide = item.snapGuide;
       const anchor = this.screenPoint(item, { x: Math.min(item.rect.w * 0.4, 60), y: Math.min(item.rect.h * 0.5, 22) });
-      await this.moveTo(c, anchor, { speed: 0.8 });
+      await this.moveTo(c, anchor, { speed: 1.2 });
       c.press = 1;
       await this.moveTo(
         c,
         () => ({ x: anchor.x + (item.node ? this.currentOffset(item).x : 0) - (offset.x > 0 ? rand(2, 5) : 0), y: anchor.y }),
         {
           drag: true,
-          speed: 0.65,
+          speed: 1.1,
           onStep: () => {
             const near = Math.abs(c.x - anchor.x) < 9;
             if (near && guide.flash < 0.4) guide.flash = 1;
@@ -1717,7 +1727,7 @@ export class SwarmReconstruction {
       if (item.caret) item.caret.style.display = "none";
       return;
     }
-    const cps = clamp(total / 1.25, 26, 150);
+    const cps = clamp(total / 0.35, 120, 420);
     let shown = item.shown || 0;
     let acc = 0;
     const started = performance.now();
@@ -1740,7 +1750,7 @@ export class SwarmReconstruction {
     this.revealText(item, total);
     item.shown = total;
     if (item.caret) item.caret.style.display = "";
-    await sleep(120);
+    await sleep(25);
   }
 
   private revealText(item: BlueprintItem, count: number) {
@@ -1799,10 +1809,10 @@ export class SwarmReconstruction {
       anchor.style.cssText = `position:fixed;left:${screen.x - 2}px;top:${screen.y - 2}px;width:5px;height:5px;background:#fff;border:1px solid ${c.color};border-radius:50%;z-index:8;pointer-events:none;`;
       this.guideLayer.appendChild(anchor);
       anchors.push(anchor);
-      await sleep(70);
+      await sleep(15);
     }
     if (path) path.style.strokeDashoffset = "0";
-    await sleep(180);
+    await sleep(40);
     anchors.forEach((anchor) => anchor.remove());
     this.setShape(c, "arrow");
   }
@@ -1817,7 +1827,7 @@ export class SwarmReconstruction {
         ? { x: 6, y: clamp(value - window.scrollY + rand(-40, 40), 60, window.innerHeight - 60) }
         : { x: clamp(value - window.scrollX + rand(-60, 60), 60, window.innerWidth - 60), y: 6 };
       await this.moveTo(c, from);
-      await sleep(460);
+      await sleep(80);
       if (this.cancelled) return;
       await this.moveTo(c, from, { speed: 2 });
       this.setShape(c, guide.axis === "vertical" ? "ew" : "ns");
@@ -1830,7 +1840,7 @@ export class SwarmReconstruction {
         : { x: c.x, y: guide.pos - window.scrollY };
       await this.moveTo(c, destination, {
         drag: true,
-        speed: 0.62,
+        speed: 1.1,
         bend: 0,
         onStep: () => {
           guide.cur = guide.axis === "vertical" ? c.x + window.scrollX : c.y + window.scrollY;
@@ -1838,7 +1848,7 @@ export class SwarmReconstruction {
       });
       guide.cur = guide.pos;
       c.press = 0;
-      await sleep(180);
+      await sleep(50);
       this.setShape(c, "arrow");
     } finally {
       this.rulerWant = Math.max(0, this.rulerWant - 1);
@@ -1854,7 +1864,7 @@ export class SwarmReconstruction {
     if (this.cancelled) return;
     await this.click(c);
     const sourceGhost = this.makeGhost(source, { red: true, badge: `${Math.round(source.w)} × ${Math.round(source.h)}` });
-    await sleep(220);
+    await sleep(60);
     this.setShape(c, "dup");
     c.press = 1;
     const dragGhost = this.makeGhost(destination, { red: true, badge: `${Math.round(destination.w)} × ${Math.round(destination.h)}` });
@@ -1863,7 +1873,7 @@ export class SwarmReconstruction {
     const offsetY = destination.y - source.y;
     await this.moveTo(c, { x: anchor.x + offsetX, y: anchor.y + offsetY }, {
       drag: true,
-      speed: 0.62,
+      speed: 1.1,
       bend: 0,
       onStep: () => {
         const dx = c.x - anchor.x;
@@ -1894,7 +1904,7 @@ export class SwarmReconstruction {
         if (path) path.style.strokeDashoffset = "0";
       }
     }
-    await sleep(560);
+    await sleep(140);
     sourceGhost.remove();
     this.setShape(c, "arrow");
   }
@@ -1960,21 +1970,21 @@ export class SwarmReconstruction {
       if (c.task) return;
       this.setShape(c, "arrow");
     });
-    const duration = this.reduced ? 0.3 : 2.1;
+    const duration = this.reduced ? 0.3 : 1.3;
     const target = () => ({ x: window.innerWidth * 0.5, y: window.innerHeight * 0.48 });
-    const scrollPromise = this.scrollTo(0, this.reduced ? 0.1 : 1.35);
+    const scrollPromise = this.scrollTo(0, this.reduced ? 0.1 : 0.9);
     await this.flockLoop(duration, target, 1, true);
     if (this.cancelled) return;
     await Promise.all(this.cursors.map((c) => {
-      c.el.style.transition = "opacity .55s ease";
+      c.el.style.transition = "opacity .4s ease";
       c.el.style.opacity = "0";
-      return sleep(560);
+      return sleep(420);
     }));
     await scrollPromise;
     if (this.cancelled) return;
-    this.host.style.transition = "opacity .8s ease";
+    this.host.style.transition = "opacity .5s ease";
     this.host.style.opacity = "0";
-    await sleep(820);
+    await sleep(520);
     this.host.remove();
     this.complete = true;
     this.cancelled = true;
