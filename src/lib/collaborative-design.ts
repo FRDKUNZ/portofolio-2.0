@@ -15,6 +15,8 @@ const designGroups: Task[][] = [
   [{ id: "project-1", designer: "sarah", corner: "tl" }, { id: "project-2", designer: "daniel", corner: "br" }, { id: "project-3", designer: "michael", corner: "tr" }],
   [{ id: "project-4", designer: "alex", corner: "bl" }, { id: "project-5", designer: "sarah", corner: "tr" }, { id: "project-6", designer: "daniel", corner: "br" }],
   [{ id: "project-7", designer: "michael", corner: "tl" }, { id: "project-8", designer: "emma", corner: "br" }],
+  [{ id: "project-9", designer: "alex", corner: "tl" }, { id: "project-10", designer: "sarah", corner: "br" }, { id: "project-11", designer: "daniel", corner: "tr" }],
+  [{ id: "project-12", designer: "michael", corner: "bl" }, { id: "project-13", designer: "emma", corner: "br" }],
   [{ id: "tools", designer: "emma", corner: "tl" }],
   [{ id: "profile-title", designer: "alex", corner: "bl" }, { id: "profile-copy", designer: "emma", corner: "br" }],
   [{ id: "skills", designer: "michael", corner: "tl" }, { id: "quote", designer: "sarah", corner: "br" }],

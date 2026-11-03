@@ -26,6 +26,11 @@ The repository lists LinkedIn as `#` and most project URLs as `#`; these dead li
 | Tyler Cinematic Portrait | Video | `tyler.jpg`, `tyler.mp4` |
 | Workout Web Project | Programming | `workout_web.png`; live demo retained |
 | Azure Store | Programming | `azure_web.png`; live demo retained |
+| Siskeudes Introduction Video | Video | `bank-bjb-1.png`, `bank-bjb-2.png` (from `extracted_text`) |
+| Nahda Skincare Anniversary Backdrop | Video | `nahda-1.png`, `nahda-2.png` (from `extracted_text`) |
+| Tangerang Network News Design | Design | `tangerang-network-1.png` to `tangerang-network-4.png` (from `extracted_text`) |
+| Rajana Printing Design | Design | `rajana-printing-1.png` to `rajana-printing-5.png` (from `extracted_text`) |
+| Adat Food Brand | Design | `adat-food-1.png`, `adat-food-2.png` (from `extracted_text`) |
 
 All assets are copied without renaming into `public/portfolio/images` and `public/portfolio/videos`. The source archive's root `pp.jpeg` is available as `public/portfolio/profile.jpeg` and is used in the hero.
 

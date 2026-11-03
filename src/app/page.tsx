@@ -7,7 +7,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Flip } from "gsap/Flip";
 import Lenis from "@studio-freight/lenis";
-import { projects, filters, type Project } from "@/data/portfolio";
+import { projects, filters, featuredProjects, type Project } from "@/data/portfolio";
 import { contact, profile, services, skillGroups } from "@/data/site-content";
 import { motion } from "@/lib/animations";
 import { createExperience } from "@/lib/experience";
@@ -226,8 +226,24 @@ export default function Home() {
     </section>
 
     <section className="case-study section-wrap">
-      <div className="section-topline" data-reveal><span>03 / PROYEK PILIHAN</span><span>GUSION MOTION EDIT</span></div>
-      <div className="case-layout"><div className="case-copy" data-design-target="case-copy" data-reveal><p className="eyebrow">VIDEO / 2025</p><h2>GUSION<br/><span>MOTION.</span></h2><p>{projects.find((project) => project.id === "gusion-motion-edit")?.description.id}</p><a href="#work" className="text-link" data-magnetic data-magnetic-max="8">JELAJAHI PROYEK <ArrowUpRight size={15}/></a></div><div className="case-image design-pass" data-design-target="case-visual"><img src="/portfolio/images/gs.png" alt="Artwork Gusion Motion Edit" loading="lazy"/><span>GUSION MOTION EDIT — FERDIANSYAH</span></div></div>
+      <div className="section-topline" data-reveal><span>03 / PROYEK PILIHAN</span><span>{String(featuredProjects.length).padStart(2, "0")} STUDI KASUS</span></div>
+      {featuredProjects.map((featured, index) => {
+        const project = projects.find((item) => item.id === featured.projectId);
+        if (!project) return null;
+        const thumbnail = project.media.find((media) => media.type === "image") ?? project.media[0];
+        return <div className={`case-layout${index % 2 === 1 ? " is-reversed" : ""}`} key={featured.projectId}>
+          <div className="case-copy" data-design-target={index === 0 ? "case-copy" : undefined} data-reveal>
+            <p className="eyebrow">{categoryLabels[project.category].toUpperCase()} / {project.year}</p>
+            <h2>{featured.title[0]}<br/><span>{featured.title[1]}</span></h2>
+            <p>{project.description.id}</p>
+            <a href="#work" className="text-link" data-magnetic data-magnetic-max="8" onClick={(event) => { event.preventDefault(); setSelectedProject(project); }}>JELAJAHI PROYEK <ArrowUpRight size={15}/></a>
+          </div>
+          <div className="case-image design-pass" data-design-target={index === 0 ? "case-visual" : undefined}>
+            <img src={thumbnail.src} alt={`Artwork ${project.title.en}`} loading="lazy" style={{ objectFit: thumbnail.fit ?? "cover" }}/>
+            <span>{project.title.en.toUpperCase()} — FERDIANSYAH</span>
+          </div>
+        </div>;
+      })}
     </section>
 
     <section className="journey section-wrap" id="services">

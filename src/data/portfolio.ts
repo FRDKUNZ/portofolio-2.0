@@ -74,6 +74,50 @@ export const projects: Project[] = [
     media: [image("azure_web.png", "Thumbnail Azure Store yang menampilkan hero section dan katalog produk.")],
     link: "https://azure-store-two.vercel.app/",
   },
+  {
+    id: "bank-bjb-siskeudes-video",
+    title: { id: "Video Pengenalan Siskeudes", en: "Siskeudes Introduction Video" },
+    description: { id: "Video pengenalan aplikasi Sistem Keuangan Desa (Siskeudes) untuk Bank BJB dan Pemkab Tangerang, dikerjakan dengan deadline yang sangat singkat.", en: "An introduction video for the Village Financial System (Siskeudes) app for Bank BJB and the Tangerang Regency Government, delivered under a very tight deadline." },
+    category: "video", year: "2023", tags: ["After Effects", "Motion Graphic", "Client Project"],
+    media: [image("bank-bjb-1.png", "Frame utama video pengenalan aplikasi Siskeudes untuk Bank BJB dan Pemkab Tangerang."), image("bank-bjb-2.png", "Visual pendukung yang menampilkan alur dan fitur aplikasi Siskeudes.")],
+  },
+  {
+    id: "nahda-skincare-anniversary",
+    title: { id: "Backdrop Video Nahda Skincare", en: "Nahda Skincare Anniversary Backdrop" },
+    description: { id: "Backdrop video untuk perayaan anniversary ke-3 Nahda Skincare, mencakup rangkaian tema dari pembukaan hingga penutupan acara.", en: "Video backdrop for Nahda Skincare's 3rd anniversary, covering themed visuals from the opening to the closing of the event." },
+    category: "video", year: "2023", tags: ["Video Backdrop", "Motion Graphic", "Event"],
+    media: [image("nahda-1.png", "Tampilan backdrop video pada rangkaian acara anniversary Nahda Skincare."), image("nahda-2.png", "Visual pendukung suasana perayaan anniversary ke-3 Nahda Skincare.")],
+  },
+  {
+    id: "tangerang-network-news-design",
+    title: { id: "Desain Berita Tangerang Network", en: "Tangerang Network News Design" },
+    description: { id: "Desain thumbnail dan konten visual berita online untuk Tangerang Network, dibuat agar informatif dan mudah dipahami pembaca.", en: "News thumbnail and visual content design for Tangerang Network, built to be informative and easy for readers to understand." },
+    category: "design", year: "2022", tags: ["Photoshop", "Social Media", "News Design"],
+    media: [image("tangerang-network-1.png", "Desain konten berita mengenai cara cek penerima BLT BBM."), image("tangerang-network-2.png", "Desain berita rekrutmen PPK dan forum PNLG 2022."), image("tangerang-network-3.png", "Desain berita olahraga bertema Piala Dunia."), image("tangerang-network-4.png", "Desain berita investigasi bertema mobil desa.")],
+  },
+  {
+    id: "rajana-printing-design",
+    title: { id: "Desain Percetakan Rajana Printing", en: "Rajana Printing Design" },
+    description: { id: "Materi cetak berkualitas tinggi untuk berbagai klien Rajana Printing, mulai dari spanduk, mug, hingga banner promosi.", en: "High-quality print materials for Rajana Printing's clients, from banners and mugs to promotional signage." },
+    category: "design", year: "2023", tags: ["Print Design", "Social Media", "Branding"],
+    media: [image("rajana-printing-1.png", "Banner promo es krim dengan penawaran topping gratis."), image("rajana-printing-2.png", "Banner layanan kesehatan ibu dan anak untuk klien percetakan."), image("rajana-printing-3.png", "Desain spanduk Rajana Printing dengan informasi layanan dan kontak."), image("rajana-printing-4.png", "Desain promosi cetak mug keramik digital."), image("rajana-printing-5.png", "Desain spanduk perayaan HUT RI ke-78.")],
+  },
+  {
+    id: "adat-food-branding",
+    title: { id: "Brand Adat Food", en: "Adat Food Brand" },
+    description: { id: "Proyek brand makanan tradisional khas Tangerang, mencakup logo, poster, dan packaging sebagai tugas akhir sekolah.", en: "A traditional Tangerang food brand project covering logo, poster, and packaging as a school final assignment." },
+    category: "design", year: "2023", tags: ["Branding", "Packaging", "Poster"],
+    media: [image("adat-food-1.png", "Poster produk kue cucur dengan visual hangat dan menggugah selera."), image("adat-food-2.png", "Poster penjelasan kue tradisional Betawi sebagai bagian dari brand Adat Food.")],
+  },
+];
+
+export type FeaturedProject = { projectId: string; title: [string, string] };
+
+export const featuredProjects: FeaturedProject[] = [
+  { projectId: "akuma-apparel-branding", title: ["AKUMA", "APPAREL."] },
+  { projectId: "mamaroz-hazelnut-promo", title: ["MAMAROZ", "HAZELNUT."] },
+  { projectId: "gusion-motion-edit", title: ["GUSION", "MOTION."] },
+  { projectId: "workout-web-project", title: ["WORKOUT", "WEB."] },
 ];
 
 export const filters = [

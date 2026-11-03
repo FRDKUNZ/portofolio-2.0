@@ -432,47 +432,85 @@ export function createExperience(lenis: LenisLike, reducedMotion: boolean): Expe
     document.body.appendChild(cursor);
     const label = cursor.querySelector<HTMLElement>(".site-cursor-label");
     const ring = cursor.querySelector<HTMLElement>(".site-cursor-ring");
-    const xTo = gsap.quickTo(cursor, "x", { duration: 0.19, ease: "power3.out" });
-    const yTo = gsap.quickTo(cursor, "y", { duration: 0.19, ease: "power3.out" });
+    const dot = cursor.querySelector<HTMLElement>(".site-cursor-dot");
+    const ringXTo = ring ? gsap.quickTo(ring, "x", { duration: 0.56, ease: "power2.out" }) : null;
+    const ringYTo = ring ? gsap.quickTo(ring, "y", { duration: 0.56, ease: "power2.out" }) : null;
     let visible = false;
+    let pointerX = -1;
+    let pointerY = -1;
+    let moveFrame = 0;
+    let targetFrame = 0;
+    let activeTarget: HTMLElement | null = null;
+    let targetSignature = "";
 
     const show = () => {
       if (visible) return;
       visible = true;
-      gsap.to(cursor, { opacity: 1, duration: 0.25, ease: "power2.out" });
+      gsap.to(cursor, { opacity: 1, duration: 0.28, ease: "power2.out" });
     };
     const hide = () => {
       visible = false;
-      gsap.to(cursor, { opacity: 0, duration: 0.2, ease: "power2.out" });
+      gsap.to(cursor, { opacity: 0, duration: 0.22, ease: "power2.out" });
+    };
+
+    const ringScale = (element: HTMLElement | null) => {
+      if (!element) return 1;
+      if (element.classList.contains("project-link")) return 1.6;
+      if (element.dataset.cursor) return 1.44;
+      return 1.32;
+    };
+
+    const syncTarget = () => {
+      targetFrame = 0;
+      if (!visible || pointerX < 0 || pointerY < 0) return;
+      const node = document.elementFromPoint(pointerX, pointerY);
+      const interactive = node instanceof Element
+        ? node.closest<HTMLElement>("a, button, input, textarea, select, [data-cursor], [role='tab'], [data-magnetic]")
+        : null;
+      const target = interactive && !interactive.matches(":disabled") ? interactive : null;
+      const nextLabel = target?.dataset.cursor || "";
+      const isView = target?.classList.contains("project-link") ?? false;
+      const signature = `${target ? 1 : 0}|${nextLabel}|${isView ? 1 : 0}`;
+      if (signature === targetSignature) return;
+      targetSignature = signature;
+      activeTarget = target;
+      cursor.classList.toggle("is-interactive", Boolean(target));
+      cursor.classList.toggle("is-view", isView);
+      cursor.classList.toggle("has-label", Boolean(nextLabel));
+      if (label) label.textContent = nextLabel;
+      if (ring) {
+        gsap.to(ring, { scale: ringScale(target), duration: 0.3, ease: "power2.out", overwrite: "auto" });
+      }
+    };
+
+    const scheduleTarget = () => {
+      if (targetFrame || !visible) return;
+      targetFrame = requestAnimationFrame(syncTarget);
+    };
+
+    const flushMove = () => {
+      moveFrame = 0;
+      if (dot) gsap.set(dot, { x: pointerX, y: pointerY });
+      ringXTo?.(pointerX);
+      ringYTo?.(pointerY);
+      show();
+      scheduleTarget();
     };
 
     const onMove = (event: PointerEvent) => {
       if (event.pointerType !== "mouse") return;
-      xTo(event.clientX);
-      yTo(event.clientY);
-      show();
-      const target = event.target instanceof Element ? event.target : null;
-      const interactive = target?.closest<HTMLElement>("a, button, input, textarea, select, [data-cursor], [role='tab']") ?? null;
-      const nextLabel = interactive?.dataset.cursor || "";
-      const isView = interactive?.matches(".project-link") ?? false;
-      cursor.classList.toggle("is-interactive", Boolean(interactive));
-      cursor.classList.toggle("is-view", isView);
-      cursor.classList.toggle("has-label", Boolean(nextLabel));
-      if (label) label.textContent = nextLabel;
-      if (ring && interactive) {
-        gsap.to(ring, { scale: isView ? 1.6 : 1.32, duration: 0.24, ease: "power2.out", overwrite: "auto" });
-      } else if (ring) {
-        gsap.to(ring, { scale: 1, duration: 0.24, ease: "power2.out", overwrite: "auto" });
-      }
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (!moveFrame) moveFrame = requestAnimationFrame(flushMove);
     };
 
     const onDown = () => {
       cursor.classList.add("is-pressed");
-      if (ring) gsap.to(ring, { scale: 0.82, duration: 0.12, ease: "power2.out", overwrite: "auto" });
+      if (ring) gsap.to(ring, { scale: 0.82, duration: 0.14, ease: "power2.out", overwrite: "auto" });
     };
     const onUp = () => {
       cursor.classList.remove("is-pressed");
-      if (ring) gsap.to(ring, { scale: 1, duration: 0.22, ease: "power3.out", overwrite: "auto" });
+      if (ring) gsap.to(ring, { scale: ringScale(activeTarget), duration: 0.28, ease: "power3.out", overwrite: "auto" });
     };
     const onLeaveWindow = (event: MouseEvent) => {
       if (!event.relatedTarget) hide();
@@ -481,17 +519,27 @@ export function createExperience(lenis: LenisLike, reducedMotion: boolean): Expe
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onDown, { passive: true });
     window.addEventListener("pointerup", onUp, { passive: true });
+    window.addEventListener("scroll", scheduleTarget, { passive: true });
+    window.addEventListener("portfolio:layout", scheduleTarget);
     window.addEventListener("mouseout", onLeaveWindow);
+    const targetObserver = new MutationObserver(scheduleTarget);
+    targetObserver.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["data-cursor"] });
     addCleanup(() => {
+      if (moveFrame) cancelAnimationFrame(moveFrame);
+      if (targetFrame) cancelAnimationFrame(targetFrame);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("scroll", scheduleTarget);
+      window.removeEventListener("portfolio:layout", scheduleTarget);
       window.removeEventListener("mouseout", onLeaveWindow);
+      targetObserver.disconnect();
       cursor.remove();
     });
   };
 
   setupNavigation();
+  setupCustomCursor();
 
   return {
     activate() {
@@ -502,7 +550,6 @@ export function createExperience(lenis: LenisLike, reducedMotion: boolean): Expe
       setupHeroTypography();
       setupProjectPreviews();
       setupScrollReveals();
-      setupCustomCursor();
       requestAnimationFrame(() => ScrollTrigger.refresh());
     },
     destroy() {

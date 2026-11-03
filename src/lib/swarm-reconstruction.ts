@@ -1519,7 +1519,8 @@ export class SwarmReconstruction {
     this.cursors.forEach((cursor, index) => this.beginIdle(cursor, 20 + index * 45));
     const pending = [...this.tasks];
     const workers = this.cursors.length;
-    const deadline = performance.now() + (this.mobile ? 14000 : 18000);
+    const deadline = performance.now() + (this.mobile ? 36000 : 42000);
+    const bandHeight = window.innerHeight * (this.mobile ? 0.78 : 0.82);
     let guard = 0;
     while (!this.cancelled && performance.now() < deadline && pending.some((task) => task.state !== "done") && guard++ < 1200) {
       const waiting = pending.filter((task) => task.state === "wait");
@@ -1538,22 +1539,24 @@ export class SwarmReconstruction {
       }
       ready.sort((a, b) => a.y - b.y);
       const minY = ready[0].y;
-      let limit = 900;
-      let band = ready.filter((task) => task.y < minY + limit);
-      while (band.length < workers && limit < 3600) {
-        limit += 600;
-        band = ready.filter((task) => task.y < minY + limit);
-      }
+      const band = ready.filter((task) => task.y <= minY + bandHeight);
       const isFixedBand = band.every((task) => task.item?.fixed);
       if (!isFixedBand) {
-        const focus = Math.max(minY, ...band.map((task) => task.y)) * 0.5 + minY * 0.5;
         const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        const target = clamp(focus - window.innerHeight * 0.42, 0, maxScroll);
-        if (Math.abs(target - window.scrollY) > 40) await this.scrollTo(target, 0.16);
-        if (this.cancelled) return;
+        const target = clamp(minY - window.innerHeight * 0.14, 0, maxScroll);
+        if (Math.abs(target - window.scrollY) > 80) {
+          await this.scrollTo(target, this.mobile ? 0.62 : 0.78);
+          if (this.cancelled) return;
+        }
       }
-      const slice = band.slice(0, workers);
-      await Promise.all(slice.map((task) => this.runTask(task)));
+
+      const queue = [...band];
+      while (queue.length && !this.cancelled) {
+        const wave = queue.splice(0, workers);
+        await Promise.all(wave.map((task) => this.runTask(task)));
+      }
+      if (this.cancelled) return;
+      await sleep(160);
     }
     if (!this.cancelled) {
       await sleep(160);
