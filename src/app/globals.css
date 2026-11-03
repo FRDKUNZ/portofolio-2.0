@@ -133,3 +133,130 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 @media(max-width:600px){.topbar.is-compressed{height:54px}.figure-frame{inset:9% 3% 2%}.scroll-progress{height:2px}.site-cursor{display:none}}
 @media(hover:none),(pointer:coarse){.site-cursor{display:none}.hero-aura{animation:none}}
 @media(prefers-reduced-motion:reduce){.hero-aura{animation:none}.hero-rail i{animation:none}.site-cursor{display:none}}
+
+/* Tactical ornament system */
+.hero,.work,.recognition,.case-study,.journey,.contact{position:relative}
+.tactical-layer,.tac-decoration{position:absolute;inset:0;pointer-events:none;z-index:2}
+.tactical-layer{overflow:hidden}
+.tac-decoration{position:absolute}
+.tac-bracket{position:absolute;overflow:visible;color:rgba(255,255,255,.32);opacity:0;transition:transform .35s ease,color .35s ease;will-change:transform}
+.tac-bracket--tl{left:10px;top:10px}
+.tac-bracket--tr{right:10px;top:10px}
+.tac-bracket--bl{left:10px;bottom:10px}
+.tac-bracket--br{right:10px;bottom:10px}
+.tac-bracket-base{stroke-dasharray:100;stroke-dashoffset:100}
+.tac-bracket-accent{opacity:.5;transition:opacity .3s ease}
+.project-link:hover .tac-bracket,.case-image:hover .tac-bracket,.recognition-title:hover .tac-bracket{transform:scale(1.08);color:rgba(255,255,255,.62)}
+.project-link:hover .tac-bracket-accent,.case-image:hover .tac-bracket-accent,.recognition-title:hover .tac-bracket-accent{opacity:1}
+.tac-line{position:absolute;color:rgba(255,255,255,.26);pointer-events:none}
+.tac-line--horizontal{height:1px}
+.tac-line--vertical{width:1px}
+.tac-line.is-accent{color:rgba(229,72,89,.55)}
+.tac-line-svg{display:block;width:100%;height:100%;overflow:visible}
+.tac-line-node{position:absolute;width:4px;height:4px;background:var(--bg);border:1px solid rgba(229,72,89,.75);transform:translate(-50%,-50%) rotate(45deg);opacity:0}
+.tac-line-node--start{left:0;top:50%}
+.tac-line-node--end{left:100%;top:50%}
+.tac-line--vertical .tac-line-node--start{left:50%;top:0}
+.tac-line--vertical .tac-line-node--end{left:50%;top:100%}
+.tac-crosshair{position:absolute;color:rgba(255,255,255,.5);opacity:0;pointer-events:none;will-change:transform}
+.tac-crosshair-parallax,.tac-crosshair-scale{width:100%;height:100%}
+.tac-crosshair-spin{display:block;width:100%;height:100%;overflow:visible;transform-origin:50% 50%}
+.tac-shape{position:absolute;color:rgba(255,255,255,.2);opacity:0;pointer-events:none;transform-origin:50% 50%;will-change:transform}
+.tac-shape svg{display:block;width:100%;height:100%;overflow:visible}
+.tac-shape--ring{color:rgba(255,255,255,.15)}
+.tac-shape--fragment{color:rgba(255,255,255,.24)}
+.tac-indicator{position:absolute;display:flex;align-items:center;gap:7px;color:rgba(146,147,155,.8);font:7px/1.2 var(--sans);letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;pointer-events:none;opacity:0;will-change:transform}
+.tac-indicator-dot{width:4px;height:4px;flex:none;background:var(--red);transform:rotate(45deg);box-shadow:0 0 8px rgba(229,72,89,.6)}
+.tac-indicator-text{display:flex;align-items:baseline;gap:8px;border-left:1px solid rgba(229,72,89,.5);padding-left:8px}
+.tac-indicator-text b{font-weight:600;color:rgba(243,242,241,.82);font-size:8px;letter-spacing:.12em}
+.tac-indicator--right{flex-direction:row-reverse}
+.tac-indicator--right .tac-indicator-text{flex-direction:row-reverse;border-left:0;border-right:1px solid rgba(229,72,89,.5);padding-left:0;padding-right:8px}
+.tac-scan{position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:0}
+.tac-scan-beam,.tac-scan-glow{position:absolute;left:0;right:0;top:-6%;height:1px;pointer-events:none}
+.tac-scan-beam{background:linear-gradient(90deg,transparent,rgba(229,72,89,.85),rgba(255,255,255,.68),rgba(229,72,89,.85),transparent)}
+.tac-scan-glow{height:26px;top:-12%;background:linear-gradient(to bottom,transparent,rgba(229,72,89,.18),rgba(229,72,89,0))}
+.tac-scan-markers{position:absolute;inset:0;pointer-events:none}
+.tac-scan-markers i{position:absolute;width:5px;height:5px;border:1px solid rgba(229,72,89,.8);background:rgba(7,8,12,.6);transform:rotate(45deg);opacity:0}
+.tac-scan-markers i:nth-child(1){left:16%;top:34%}
+.tac-scan-markers i:nth-child(2){right:22%;top:58%}
+.tac-scan-markers i:nth-child(3){left:46%;top:78%}
+.tac-scan--hover{opacity:1}
+.tac-scan--hover .tac-scan-beam,.tac-scan--hover .tac-scan-glow{opacity:0}
+.project-link:hover .tac-scan--hover .tac-scan-beam,.project-link:hover .tac-scan--hover .tac-scan-glow{animation:tac-hover-scan 1.15s cubic-bezier(.4,0,.2,1)}
+@keyframes tac-hover-scan{0%{top:-6%;opacity:0}14%{opacity:.78}100%{top:106%;opacity:0}}
+.process-list{position:relative}
+.tac-timeline{position:absolute;left:-24px;top:6px;bottom:6px;width:16px;color:rgba(255,255,255,.2);pointer-events:none}
+.tac-timeline-rail{position:absolute;left:50%;top:0;width:2px;height:100%;overflow:visible;transform:translateX(-50%)}
+.tac-timeline-node{position:absolute;left:50%;width:6px;height:6px;transform:translate(-50%,-50%);opacity:0}
+.tac-timeline-node i{display:block;width:6px;height:6px;border:1px solid rgba(229,72,89,.82);background:var(--bg);transform:rotate(45deg);box-shadow:0 0 0 3px rgba(7,8,12,.9)}
+.tac-timeline-node b{position:absolute;right:14px;top:50%;transform:translateY(-50%);font:600 7px var(--sans);letter-spacing:.1em;color:rgba(229,72,89,.8)}
+.tac-converge{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0}
+.tac-hero-line-top{opacity:.8}
+.tac-hero-line-right{opacity:.75}
+.tac-hero-line-side{opacity:.5}
+.tac-hero-ring{opacity:.72}
+.tac-hero-fragment{opacity:.5}
+.tac-hero-crosshair{opacity:1}
+.tac-hero-crosshair--low{opacity:.55}
+.tac-hero-tick{position:absolute;background:var(--red);opacity:0;pointer-events:none}
+.tac-hero-tick--a{left:6.3vw;top:22%;width:26px;height:1px}
+.tac-hero-tick--b{right:6.3vw;top:33%;width:1px;height:26px;background:linear-gradient(to bottom,var(--red),transparent)}
+.tac-hero-tick--c{left:50%;bottom:10%;width:42px;height:1px;background:linear-gradient(90deg,transparent,rgba(229,72,89,.8))}
+.tac-figure-layer{z-index:3;overflow:hidden}
+.tac-figure-layer .tac-bracket--tl{left:3%;top:5%}
+.tac-figure-layer .tac-bracket--tr{right:3%;top:5%}
+.tac-figure-layer .tac-bracket--bl{left:3%;bottom:5%}
+.tac-figure-layer .tac-bracket--br{right:3%;bottom:5%}
+.tac-figure-scan{inset:6% 4% 7%}
+.tac-figure-crosshair{right:1%;top:9%;opacity:.8}
+.tac-figure-label{left:2%;bottom:8%}
+.recognition-title{position:relative}
+.tac-about-title-frame{overflow:hidden}
+.tac-about-title-frame .tac-bracket{color:rgba(255,255,255,.4)}
+.tac-about-title-crosshair{right:12px;bottom:12px;opacity:.7}
+.tac-about-divider{opacity:.55}
+.tac-about-shape{opacity:.55}
+.tac-about-corner{color:rgba(255,255,255,.34)}
+.tac-about-tick{position:absolute;right:8.6vw;top:22%;width:22px;height:1px;background:var(--red);opacity:0}
+.tac-work-rail{opacity:.55}
+.tac-work-shape{opacity:.5}
+.tac-work-tick{position:absolute;right:2.2vw;top:52px;width:1px;height:34px;background:linear-gradient(to bottom,var(--red),transparent);opacity:0}
+.tac-card-layer{z-index:3}
+.tac-card-layer .tac-bracket{color:rgba(255,255,255,.46)}
+.tac-card-id{position:absolute;right:10px;bottom:10px;color:rgba(255,255,255,.5);font:6px var(--sans);letter-spacing:.16em;text-transform:uppercase;pointer-events:none}
+.tac-case-layer{z-index:2}
+.tac-case-layer .tac-bracket{color:rgba(255,255,255,.5)}
+.tac-case-scan{inset:0 0 26px 0}
+.tac-case-ring{right:-24px;bottom:10px;opacity:.55}
+.tac-case-label{right:12px;top:12px;opacity:.9}
+.tac-case-image-crosshair{right:14px;bottom:34px;opacity:.7}
+.tac-case-tick{position:absolute;left:8.5vw;top:110px;width:1px;height:30px;background:linear-gradient(to bottom,var(--red),transparent);opacity:0}
+.tac-journey-shape{opacity:.35}
+.tac-contact-layout,.contact .section-topline{position:relative;z-index:3}
+.tac-contact-crosshair{opacity:.8}
+.tac-contact-shape{opacity:.5}
+.tac-contact-line{opacity:.5}
+@media(max-width:1100px){
+  .tac-hero-fragment,.tac-work-crosshair,.tac-case-shape,.tac-journey-shape{display:none}
+  .tac-about-coordinate{display:none}
+  .tac-hero-ring{opacity:.4}
+}
+@media(max-width:900px){
+  .tac-about-divider,.tac-about-shape,.tac-work-rail,.tac-work-indicator,.tac-work-shape,.tac-work-tick,.tac-case-ring,.tac-case-label,.tac-case-image-crosshair,.tac-contact-shape,.tac-contact-line,.tac-journey-crosshair,.tac-timeline,.tac-card-id{display:none}
+  .tac-hero-indicator{font-size:6px}
+  .tac-case-layer .tac-bracket:nth-child(n+3){display:none}
+  .tac-figure-label{display:none}
+}
+@media(max-width:600px){
+  .tactical-layer,.tac-decoration,.tac-timeline{display:none}
+}
+@media(hover:none),(pointer:coarse){
+  .tac-scan--hover{display:none}
+  .project-link:hover .tac-bracket,.case-image:hover .tac-bracket{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .tac-scan,.tac-scan--hover{display:none}
+  .tac-bracket,.tac-crosshair,.tac-shape,.tac-indicator,.tac-line-node,.tac-timeline-node,.tac-hero-tick{transition:none}
+  .tac-bracket-accent{opacity:.9}
+  .tac-hero-ring,.tac-case-ring,.tac-journey-shape{animation:none}
+}

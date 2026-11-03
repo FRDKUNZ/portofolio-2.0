@@ -19,6 +19,7 @@ import { gsap } from "gsap";
 type Vec2 = { x: number; y: number };
 type Rect = { x: number; y: number; w: number; h: number };
 type CursorActivity = "working" | "moving" | "inspecting" | "idle-active" | "collaborating" | "transitioning";
+type SwarmOptions = { onTactical?: () => void | Promise<unknown> };
 
 type CursorPersonality = {
   ease: string;
@@ -300,6 +301,11 @@ const OVERLAY_STYLE = `
 .measure:before { left: 0; }
 .measure:after { right: 0; }
 .measure span { position: absolute; left: 50%; top: -16px; transform: translateX(-50%); padding: 1px 4px; background: #ff334f; color: #fff; font: 600 9px/14px system-ui, Arial, sans-serif; white-space: nowrap; }
+.tactical-pass { position: absolute; inset: 0; pointer-events: none; }
+.tactical-pass svg { position: absolute; inset: 0; display: block; overflow: visible; }
+.tactical-pass .tp-draw { fill: none; stroke: #e54859; stroke-width: 1; opacity: .85; }
+.tactical-pass .tp-draw.muted { stroke: rgba(255,255,255,.3); }
+.tactical-pass .tp-label { position: absolute; padding-left: 8px; border-left: 1px solid #e54859; color: rgba(243,242,241,.62); font: 8px/1.4 system-ui, Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
 `;
 
 export class SwarmReconstruction {
@@ -323,16 +329,18 @@ export class SwarmReconstruction {
   private started = false;
   private cancelled = false;
   private complete = false;
-  private mode: "intro" | "build" | "finale" | "idle" = "idle";
+  private mode: "intro" | "build" | "tactical" | "finale" | "idle" = "idle";
   private mouse = { x: -9999, y: -9999 };
   private readonly lenis?: { scrollTo?: (v: number, o?: { immediate?: boolean }) => void; start?: () => void; stop?: () => void };
   private rulerWant = 0;
   private removeListeners: () => void = () => {};
   private readonly reduced: boolean;
   private readonly mobile: boolean;
+  private readonly options: SwarmOptions;
 
-  constructor(lenis?: { scrollTo?: (v: number, o?: { immediate?: boolean }) => void; start?: () => void; stop?: () => void }) {
+  constructor(lenis?: { scrollTo?: (v: number, o?: { immediate?: boolean }) => void; start?: () => void; stop?: () => void }, options: SwarmOptions = {}) {
     this.lenis = lenis;
+    this.options = options;
     this.reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.mobile = typeof window !== "undefined" && window.innerWidth < 700;
     this.host = document.createElement("div");
@@ -383,6 +391,9 @@ export class SwarmReconstruction {
       if (this.cancelled) return;
       this.mode = "build";
       await this.build();
+      if (this.cancelled) return;
+      this.mode = "tactical";
+      await this.tacticalPass();
       if (this.cancelled) return;
       this.mode = "finale";
       await this.finale();
@@ -1062,7 +1073,7 @@ export class SwarmReconstruction {
 
   private updateCursorIdle(dt: number) {
     if (this.cancelled || this.complete) return;
-    if (this.mode === "intro" || this.mode === "finale") return;
+    if (this.mode === "intro" || this.mode === "tactical" || this.mode === "finale") return;
     const maxX = Math.max(24, window.innerWidth - 30);
     const maxY = Math.max(30, window.innerHeight - 26);
     for (const c of this.cursors) {
@@ -1959,6 +1970,107 @@ export class SwarmReconstruction {
 
   private screenRect(rect: Rect): Rect {
     return { x: rect.x - window.scrollX, y: rect.y - window.scrollY, w: rect.w, h: rect.h };
+  }
+
+  /* ----------------------------------------------------------------- tactical */
+
+  private async tacticalPass() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const layer = document.createElement("div");
+    layer.className = "tactical-pass";
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("width", String(width));
+    svg.setAttribute("height", String(height));
+    const drawPaths: SVGGeometryElement[] = [];
+    const path = (d: string, cls = "tp-draw") => {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      element.setAttribute("d", d);
+      element.setAttribute("pathLength", "100");
+      element.setAttribute("class", cls);
+      element.style.strokeDasharray = "100";
+      element.style.strokeDashoffset = "100";
+      svg.appendChild(element);
+      drawPaths.push(element);
+    };
+    const inset = width < 700 ? 18 : 38;
+    const crossX = width * 0.54;
+    const crossY = height * 0.42;
+    const shortLine = Math.min(150, width * 0.18);
+    path(`M${inset} ${inset + 34}V${inset}H${inset + 34}`);
+    path(`M${width - inset - 34} ${inset}H${width - inset}V${inset + 34}`);
+    path(`M${inset} ${height - inset - 34}V${height - inset}H${inset + 34}`, "tp-draw muted");
+    path(`M${width - inset - 34} ${height - inset}H${width - inset}V${height - inset - 34}`);
+    path(`M${inset} ${height * 0.3}H${inset + shortLine}`, "tp-draw muted");
+    path(`M${width - inset - shortLine} ${height * 0.7}H${width - inset}`);
+    path(
+      `M${crossX} ${crossY - 56}V${crossY - 12}M${crossX} ${crossY + 12}V${crossY + 56}M${crossX - 56} ${crossY}H${crossX - 12}M${crossX + 12} ${crossY}H${crossX + 56}`,
+    );
+    const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    ring.setAttribute("cx", String(crossX));
+    ring.setAttribute("cy", String(crossY));
+    ring.setAttribute("r", "18");
+    ring.setAttribute("pathLength", "100");
+    ring.setAttribute("class", "tp-draw");
+    ring.style.strokeDasharray = "100";
+    ring.style.strokeDashoffset = "100";
+    svg.appendChild(ring);
+    drawPaths.push(ring);
+    layer.appendChild(svg);
+
+    const labels: HTMLElement[] = [];
+    const addLabel = (text: string, x: number, y: number) => {
+      const element = document.createElement("div");
+      element.className = "tp-label";
+      element.textContent = text;
+      element.style.left = `${x}px`;
+      element.style.top = `${y}px`;
+      element.style.opacity = "0";
+      layer.appendChild(element);
+      labels.push(element);
+    };
+    addLabel("SYSTEM / 001", inset + 8, inset + 44);
+    addLabel("CREATIVE SYSTEM", width - inset - 126, inset + 44);
+    addLabel("VISUAL DATA", width - inset - 92, height * 0.7 + 10);
+    this.fixedLayer.appendChild(layer);
+
+    const anchors: Vec2[] = [
+      { x: inset + 17, y: inset + 17 },
+      { x: width - inset - 17, y: inset + 17 },
+      { x: inset + 17, y: height - inset - 17 },
+      { x: width - inset - 17, y: height - inset - 17 },
+      { x: crossX, y: crossY },
+      { x: inset + 52, y: height * 0.3 },
+      { x: width - inset - 52, y: height * 0.7 },
+      { x: crossX + 4, y: crossY - 40 },
+    ];
+    const targetAnchors = Array.from(document.querySelectorAll<HTMLElement>("[data-tactical-anchor]"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      })
+      .filter((point) => point.x > 8 && point.y > 8 && point.x < width - 8 && point.y < height - 8)
+      .slice(0, 6);
+    const allAnchors = [...anchors, ...targetAnchors];
+    const workers = this.cursors.filter((cursor) => !cursor.task && !cursor.moving).slice(0, Math.min(10, allAnchors.length));
+    await Promise.all(
+      workers.map((cursor, index) => {
+        this.setShape(cursor, index % 3 === 0 ? "pen" : index % 3 === 1 ? "cross" : "arrow");
+        return this.moveTo(cursor, allAnchors[index], { duration: this.reduced ? 0.08 : 0.34, bend: 0 });
+      }),
+    );
+    if (this.cancelled) return;
+
+    const realOrnaments = Promise.resolve(this.options.onTactical?.());
+    const duration = this.reduced ? 0.1 : 0.68;
+    await new Promise<void>((resolve) => {
+      const timeline = gsap.timeline({ onComplete: resolve, onInterrupt: resolve });
+      timeline.to(drawPaths, { strokeDashoffset: 0, duration, ease: "power2.inOut", stagger: 0.035 }, 0);
+      timeline.to(labels, { opacity: 1, duration: 0.3, stagger: 0.06 }, duration * 0.35);
+    });
+    await realOrnaments;
+    await sleep(this.reduced ? 40 : 220);
   }
 
   /* ------------------------------------------------------------------- finale */
