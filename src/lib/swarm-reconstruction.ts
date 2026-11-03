@@ -511,6 +511,7 @@ export class SwarmReconstruction {
       const tag = el.tagName.toLowerCase();
       if (SKIP_TAGS.has(tag)) return;
       if (el === this.host || el.closest(".swarm-reconstruction-host, .collaborator-overlay, .project-modal")) return;
+      if (el.closest("[data-swarm-ignore]")) return;
       const cs = getComputedStyle(el);
       if (cs.display === "none" || cs.visibility === "hidden" || cs.visibility === "collapse") return;
       if (parseFloat(cs.opacity) < 0.05) return;
