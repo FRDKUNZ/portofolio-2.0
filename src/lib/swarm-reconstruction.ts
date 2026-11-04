@@ -306,6 +306,12 @@ const OVERLAY_STYLE = `
 .tactical-pass .tp-draw { fill: none; stroke: #e54859; stroke-width: 1; opacity: .85; }
 .tactical-pass .tp-draw.muted { stroke: rgba(255,255,255,.3); }
 .tactical-pass .tp-label { position: absolute; padding-left: 8px; border-left: 1px solid #e54859; color: rgba(243,242,241,.62); font: 8px/1.4 system-ui, Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+@media (max-width: 700px) {
+  .cursor { width: 20px; height: 20px; }
+  .cursor-label { left: 11px; top: 14px; padding: 1px 4px; font-size: 6px; max-width: 64px; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 9px; line-height: 14px; }
+  .measure span { font: 600 8px/12px system-ui, Arial, sans-serif; }
+}
 `;
 
 export class SwarmReconstruction {
@@ -972,7 +978,7 @@ export class SwarmReconstruction {
   }
 
   private createCursors() {
-    const count = 30;
+    const count = this.mobile ? 12 : 30;
     for (let i = 0; i < count; i++) {
       const el = document.createElement("div");
       el.className = "cursor";
@@ -1227,7 +1233,7 @@ export class SwarmReconstruction {
   private animateIdle(c: SwarmCursor, target: Vec2, activity: CursorActivity, onDone?: () => void) {
     this.stopIdle(c);
     const distance = Math.hypot(target.x - c.x, target.y - c.y);
-    const duration = clamp((0.42 + distance / 560) / c.personality.travelSpeed, 0.3, 1.5) * (this.mobile ? 1.22 : 1);
+    const duration = clamp((0.42 + distance / 560) / c.personality.travelSpeed, 0.3, 1.5);
     c.activity = activity;
     c.idleTween = gsap.to(c, {
       x: target.x,
@@ -1530,7 +1536,7 @@ export class SwarmReconstruction {
     this.cursors.forEach((cursor, index) => this.beginIdle(cursor, 20 + index * 45));
     const pending = [...this.tasks];
     const workers = this.cursors.length;
-    const deadline = performance.now() + (this.mobile ? 36000 : 42000);
+    const deadline = performance.now() + 42000;
     const bandHeight = window.innerHeight * (this.mobile ? 0.78 : 0.82);
     let guard = 0;
     while (!this.cancelled && performance.now() < deadline && pending.some((task) => task.state !== "done") && guard++ < 1200) {
@@ -1567,10 +1573,10 @@ export class SwarmReconstruction {
         await Promise.all(wave.map((task) => this.runTask(task)));
       }
       if (this.cancelled) return;
-      await sleep(160);
+      await sleep(this.mobile ? 80 : 160);
     }
     if (!this.cancelled) {
-      await sleep(160);
+      await sleep(this.mobile ? 80 : 160);
     }
   }
 
@@ -2063,7 +2069,7 @@ export class SwarmReconstruction {
     if (this.cancelled) return;
 
     const realOrnaments = Promise.resolve(this.options.onTactical?.());
-    const duration = this.reduced ? 0.1 : 0.68;
+    const duration = this.reduced ? 0.1 : this.mobile ? 0.54 : 0.68;
     await new Promise<void>((resolve) => {
       const timeline = gsap.timeline({ onComplete: resolve, onInterrupt: resolve });
       timeline.to(drawPaths, { strokeDashoffset: 0, duration, ease: "power2.inOut", stagger: 0.035 }, 0);
@@ -2086,9 +2092,9 @@ export class SwarmReconstruction {
       if (c.task) return;
       this.setShape(c, "arrow");
     });
-    const duration = this.reduced ? 0.3 : 1.3;
+    const duration = this.reduced ? 0.3 : this.mobile ? 1 : 1.3;
     const target = () => ({ x: window.innerWidth * 0.5, y: window.innerHeight * 0.48 });
-    const scrollPromise = this.scrollTo(0, this.reduced ? 0.1 : 0.9);
+    const scrollPromise = this.scrollTo(0, this.reduced ? 0.1 : this.mobile ? 0.7 : 0.9);
     await this.flockLoop(duration, target, 1, true);
     if (this.cancelled) return;
     await Promise.all(this.cursors.map((c) => {

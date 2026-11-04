@@ -11,7 +11,7 @@ export type Project = {
   link?: string;
 };
 
-const image = (name: string, caption: string, fit: ProjectMedia["fit"] = "cover"): ProjectMedia => ({ type: "image", src: `/portfolio/images/${name}`, caption, fit });
+const image = (name: string, caption: string, fit: ProjectMedia["fit"] = "cover"): ProjectMedia => ({ type: "image", src: `/portfolio/images/${name.replace(/\.(png|jpe?g|webp)$/i, ".webp")}`, caption, fit });
 const video = (name: string, caption: string, fit: ProjectMedia["fit"] = "cover"): ProjectMedia => ({ type: "video", src: `/portfolio/videos/${name}`, caption, fit });
 
 // Project facts, media, and links are transcribed from the supplied repository's data/projects.js.
@@ -63,7 +63,7 @@ export const projects: Project[] = [
     title: { id: "Workout Web Project", en: "Workout Web Project" },
     description: { id: "Aplikasi web nutrition tracker dengan tampilan bersih, fokus ke pengalaman pengguna, dan navigasi yang sederhana.", en: "A nutrition tracker web app with a clean interface, user-focused experience, and simple navigation." },
     category: "code", year: "2025", tags: ["Next.js", "Responsive UI", "Web App"],
-    media: [image("workout_web.png", "Thumbnail aplikasi nutrition tracker dengan tampilan mobile-first dan fokus ke data harian.")],
+    media: [image("workout_web.png", "Thumbnail aplikasi nutrition tracker dengan tampilan mobile-first dan fokus ke data harian.", "cover")],
     link: "https://web-workout-project.vercel.app",
   },
   {

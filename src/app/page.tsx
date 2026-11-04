@@ -27,6 +27,10 @@ import {
 gsap.registerPlugin(ScrollTrigger, Flip);
 const allSkills = skillGroups.flatMap((group) => group.tools);
 const categoryLabels: Record<string, string> = { design: "Desain Grafis", video: "Video Editing", code: "Pemrograman" };
+const smallImage = (src: string) => (src.endsWith(".webp") ? src.replace(/\.webp$/, "-sm.webp") : src);
+const imageSrcSet = (src: string) => (src.endsWith(".webp") ? `${smallImage(src)} 800w, ${src} 1200w` : undefined);
+const mobileVideo = (src: string) => (src.endsWith(".mp4") ? src.replace(/\.mp4$/, "-mobile.mp4") : src);
+const isMobileViewport = () => typeof window !== "undefined" && (window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 700);
 
 declare global {
   interface Window { emailjs?: { send: (serviceId: string, templateId: string, values: Record<string, string>, options: { publicKey: string }) => Promise<unknown> } }
@@ -46,14 +50,23 @@ export default function Home() {
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lenis = new Lenis({ duration: 1.05, smoothWheel: !reducedMotion, wheelMultiplier: 0.88 });
+    const mobile = isMobileViewport();
     let frame = 0;
-    const raf = (time: number) => { lenis.raf(time); frame = requestAnimationFrame(raf); };
-    frame = requestAnimationFrame(raf);
-    lenis.on("scroll", ScrollTrigger.update);
+    let lenis: Lenis | undefined;
+    if (!mobile) {
+      lenis = new Lenis({ duration: 1.05, smoothWheel: !reducedMotion, wheelMultiplier: 0.88 });
+      const raf = (time: number) => { lenis!.raf(time); frame = requestAnimationFrame(raf); };
+      frame = requestAnimationFrame(raf);
+      lenis.on("scroll", ScrollTrigger.update);
+    }
     gsap.ticker.lagSmoothing(0);
 
-    const experience = createExperience(lenis, reducedMotion);
+    const nativeScroller = {
+      scrollTo: (target: number, options?: { duration?: number; immediate?: boolean; easing?: (t: number) => number }) => {
+        window.scrollTo({ top: target, behavior: options?.immediate || reducedMotion ? "auto" : "smooth" });
+      },
+    };
+    const experience = createExperience(lenis ?? nativeScroller, reducedMotion);
     const tactical = createTacticalExperience(reducedMotion);
     let controller: SwarmReconstruction | undefined;
     let disposed = false;
@@ -80,7 +93,7 @@ export default function Home() {
       experience.destroy();
       controller?.destroy();
       cancelAnimationFrame(frame);
-      lenis.destroy();
+      lenis?.destroy();
     };
   }, []);
 
@@ -120,9 +133,25 @@ export default function Home() {
   useEffect(() => {
     if (!selectedProject) return;
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setSelectedProject(null); };
+    document.documentElement.classList.add("is-locked");
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      document.documentElement.classList.remove("is-locked");
+      window.removeEventListener("keydown", closeOnEscape);
+    };
   }, [selectedProject]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuOpen(false); };
+    const closeOnDesktop = () => { if (window.innerWidth > 600) setMenuOpen(false); };
+    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("resize", closeOnDesktop);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("resize", closeOnDesktop);
+    };
+  }, [menuOpen]);
 
   function changeFilter(next: string) {
     const grid = gridRef.current;
@@ -188,11 +217,11 @@ export default function Home() {
     <Script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" strategy="afterInteractive" />
     <header className="topbar">
       <a className="brand" data-design-target="brand" href="#home" aria-label="Ferdiansyah home">FERDIANSYAH<span className="brand-dot">.</span></a>
-      <nav className={menuOpen ? "nav-links open" : "nav-links"} data-design-target="nav" aria-label="Navigasi utama">
+      <nav id="site-nav" className={menuOpen ? "nav-links open" : "nav-links"} data-design-target="nav" aria-label="Navigasi utama">
         <a href="#work" data-magnetic="0.16" data-magnetic-max="8" onClick={() => setMenuOpen(false)}>Karya</a><a href="#about" data-magnetic="0.16" data-magnetic-max="8" onClick={() => setMenuOpen(false)}>Tentang</a><a href="#services" data-magnetic="0.16" data-magnetic-max="8" onClick={() => setMenuOpen(false)}>Keahlian</a><a href="#contact" data-magnetic="0.16" data-magnetic-max="8" onClick={() => setMenuOpen(false)}>Kontak</a>
       </nav>
       <a className="header-cta" data-design-target="header-cta" data-magnetic href="#contact">HUBUNGI SAYA <ArrowUpRight size={13}/></a>
-      <button className="menu-toggle" aria-label={menuOpen ? "Tutup menu" : "Buka menu"} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X/> : <Menu/>}<span>{menuOpen ? "TUTUP" : "MENU"}</span></button>
+      <button type="button" className="menu-toggle" aria-label={menuOpen ? "Tutup menu" : "Buka menu"} aria-expanded={menuOpen} aria-controls="site-nav" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X/> : <Menu/>}<span>{menuOpen ? "TUTUP" : "MENU"}</span></button>
     </header>
 
     <section className="hero" id="home" data-tactical-group="hero">
@@ -209,7 +238,7 @@ export default function Home() {
           <a href="#work" className="hero-cta" data-magnetic data-magnetic-max="10">LIHAT KARYA SAYA <ArrowDown size={14}/></a>
         </div>
       </div>
-      <div className="hero-figure" data-design-target="hero-visual"><div className="figure-backdrop"/><img className="profile-portrait" src={profile.photo} alt="Foto Ferdiansyah"/><span className="figure-frame" aria-hidden="true"/><span className="figure-label">F / 01</span><SectionDecoration className="tac-figure-layer"><AngularCornerBracket corner="tl" size={30} className="tac-figure-bracket"/><AngularCornerBracket corner="tr" size={30} className="tac-figure-bracket"/><AngularCornerBracket corner="bl" size={30} className="tac-figure-bracket"/><AngularCornerBracket corner="br" size={30} className="tac-figure-bracket"/><ScanningBeam className="tac-figure-scan" markers={false}/><CrosshairOrnament size={36} depth={0.5} className="tac-figure-crosshair"/><FloatingIndicator label="VISUAL DATA" value="F / 01" className="tac-figure-label"/></SectionDecoration></div>
+      <div className="hero-figure" data-design-target="hero-visual"><div className="figure-backdrop"/><img className="profile-portrait" src={profile.photo} srcSet={`${smallImage(profile.photo)} 520w, ${profile.photo} 900w`} sizes="(max-width: 600px) 68vw, 34vw" alt="Foto Ferdiansyah" decoding="async" fetchPriority="high"/><span className="figure-frame" aria-hidden="true"/><span className="figure-label">F / 01</span><SectionDecoration className="tac-figure-layer"><AngularCornerBracket corner="tl" size={30} className="tac-figure-bracket"/><AngularCornerBracket corner="tr" size={30} className="tac-figure-bracket"/><AngularCornerBracket corner="bl" size={30} className="tac-figure-bracket"/><AngularCornerBracket corner="br" size={30} className="tac-figure-bracket"/><ScanningBeam className="tac-figure-scan" markers={false}/><CrosshairOrnament size={36} depth={0.5} className="tac-figure-crosshair"/><FloatingIndicator label="VISUAL DATA" value="F / 01" className="tac-figure-label"/></SectionDecoration></div>
       <div className="hero-index" data-design-target="hero-index"><span>01</span><i/> 04</div>
     </section>
 
@@ -225,7 +254,7 @@ export default function Home() {
         return <article className="project-card" key={project.id} data-design-target={`project-${projectIndex}`} data-project-target data-tone="pearl">
           <button type="button" className="project-link" data-cursor="LIHAT" aria-label={`Lihat detail ${project.title.id}`} onClick={() => setSelectedProject(project)}>
             <div className="project-media">
-              <img src={thumbnail.src} alt={thumbnail.caption} loading="lazy" style={{ objectFit: thumbnail.fit ?? "cover" }}/>
+              <img src={thumbnail.src} srcSet={imageSrcSet(thumbnail.src)} sizes="(max-width: 600px) 92vw, (max-width: 850px) 45vw, 30vw" alt={thumbnail.caption} loading="lazy" decoding="async" style={{ objectFit: thumbnail.fit ?? "cover" }}/>
               {previewVideo && <video className="project-hover-video" src={previewVideo.src} muted loop playsInline preload="none" aria-hidden="true" onMouseEnter={(event) => { void event.currentTarget.play().catch(() => {}); }} onMouseLeave={(event) => { event.currentTarget.pause(); event.currentTarget.currentTime = 0; }}/ >}
               <span className="media-index">{String(projectIndex).padStart(2, "0")}</span><span className="media-arrow"><ArrowUpRight size={17}/></span><span className="media-play">LIHAT PROYEK <ArrowRight size={12}/></span>
               <div className="project-overlay" aria-hidden="true"><span>{categoryLabels[project.category]} · {project.year}</span><p>{project.description.id}</p><small>{project.tags.join(" · ")}</small></div>
@@ -254,15 +283,17 @@ export default function Home() {
         const project = projects.find((item) => item.id === featured.projectId);
         if (!project) return null;
         const thumbnail = project.media.find((media) => media.type === "image") ?? project.media[0];
-        return <div className={`case-layout${index % 2 === 1 ? " is-reversed" : ""}`} key={featured.projectId}>
-          <div className="case-copy" data-design-target={index === 0 ? "case-copy" : undefined} data-reveal>
-            <p className="eyebrow">{categoryLabels[project.category].toUpperCase()} / {project.year}</p>
-            <h2>{featured.title[0]}<br/><span>{featured.title[1]}</span></h2>
+        return <div className={`case-layout${index % 2 === 1 ? " is-reversed" : ""} case-${project.id}`} key={featured.projectId}>
+          <div className="case-copy" data-reveal>
+            <div className="case-heading" data-design-target={index === 0 ? "case-copy" : undefined}>
+              <p className="eyebrow">{categoryLabels[project.category].toUpperCase()} / {project.year}</p>
+              <h2>{featured.title[0]}<br/><span>{featured.title[1]}</span></h2>
+            </div>
             <p>{project.description.id}</p>
             <a href="#work" className="text-link" data-magnetic data-magnetic-max="8" onClick={(event) => { event.preventDefault(); setSelectedProject(project); }}>JELAJAHI PROYEK <ArrowUpRight size={15}/></a>
           </div>
           <div className="case-image design-pass" data-design-target={index === 0 ? "case-visual" : undefined}>
-            <img src={thumbnail.src} alt={`Artwork ${project.title.en}`} loading="lazy" style={{ objectFit: thumbnail.fit ?? "cover" }}/>
+            <img src={thumbnail.src} srcSet={imageSrcSet(thumbnail.src)} sizes="(max-width: 600px) 92vw, 60vw" alt={`Artwork ${project.title.en}`} loading="lazy" decoding="async" style={{ objectFit: thumbnail.fit ?? "cover" }}/>
             <span>{project.title.en.toUpperCase()} — FERDIANSYAH</span>
             <SectionDecoration className="tac-case-layer"><AngularCornerBracket corner="tl" size={34} className="tac-case-bracket"/><AngularCornerBracket corner="tr" size={34} className="tac-case-bracket"/><AngularCornerBracket corner="bl" size={34} className="tac-case-bracket"/><AngularCornerBracket corner="br" size={34} className="tac-case-bracket"/><ScanningBeam className="tac-case-scan"/><GeometricShape variant="ring" size={148} speed={30} className="tac-case-ring"/><FloatingIndicator label="VISUAL DATA" value={String(index + 1).padStart(2, "0")} className="tac-case-label"/><CrosshairOrnament size={44} depth={0.5} className="tac-case-image-crosshair"/></SectionDecoration>
           </div>
@@ -277,10 +308,10 @@ export default function Home() {
       <div className="journey-grid"><div className="journey-intro" data-design-target="services-intro" data-reveal><p>{profile.roles.join(", ")} — menggabungkan kreativitas visual dengan kemampuan teknis untuk menghasilkan karya yang bermakna.</p><span>VIDEO · DESAIN · KODE</span></div><div className="process-list design-pass" data-design-target="services-list" data-reveal><TacticalTimeline steps={services.length} />{services.map((service, index) => <div key={service.title}><span>0{index + 1}</span><strong>{service.title}</strong><small>{service.description}</small><ArrowUpRight size={14}/><ul>{service.items.map((item) => <li key={item}>{item}</li>)}</ul></div>)}</div></div>
     </section>
 
-    <section className="contact section-wrap" id="contact" data-tactical-group="contact"><TacticalOrnamentLayer section="contact" /><div className="section-topline" data-reveal><span>05 / HUBUNGI SAYA</span><span>{profile.location.toUpperCase()}</span></div><div className="contact-layout"><div className="contact-body" data-design-target="contact-copy" data-reveal><p className="eyebrow">PUNYA PROYEK?</p><h2>MARI KITA<br/>DISKUSIKAN<span>.</span></h2><p>Saya biasanya merespons dalam 1–2 hari kerja. Jika diperlukan, kita bisa menjadwalkan diskusi terlebih dahulu.</p><a className="contact-button" href={`mailto:${contact.email}`} data-magnetic data-magnetic-max="9">KIRIM EMAIL <ArrowUpRight size={16}/></a><div className="contact-socials">{contact.socials.map((social) => { const Icon = social.name === "GitHub" ? Github : social.name === "YouTube" ? Youtube : Instagram; return <a key={social.name} href={social.href} aria-label={social.name} target="_blank" rel="noreferrer"><Icon size={16}/></a>; })}</div></div><div className="contact-right" data-design-target="contact-details"><div className="contact-details" data-reveal><button type="button" className={`contact-copy${copiedEmail ? " is-copied" : ""}`} onClick={copyEmail} aria-label={copiedEmail ? "Alamat email tersalin" : "Salin alamat email"} data-cursor={copiedEmail ? "TERSALIN" : "SALIN"}><small>EMAIL {copiedEmail && <em>TERSALIN</em>}</small><strong>{contact.email}</strong>{copiedEmail ? <Check size={14}/> : <Copy size={14}/>}</button><div><small>LOKASI</small><strong>{contact.location}</strong><ArrowUpRight size={14}/></div><div><small>WAKTU RESPONS</small><strong>{contact.responseTime}</strong><ArrowUpRight size={14}/></div></div><form className="contact-form design-pass" onSubmit={sendMessage} noValidate><label htmlFor="contact-name">Nama lengkap</label><input id="contact-name" name="name" required minLength={2} autoComplete="name" placeholder="Nama lengkap" onChange={() => formStatus === "error" && setFormStatus("idle")}/><label htmlFor="contact-email">Email</label><input id="contact-email" name="email" type="email" required autoComplete="email" placeholder="Alamat email" onChange={() => formStatus === "error" && setFormStatus("idle")}/><label htmlFor="project-message">Pesan</label><textarea id="project-message" name="message" required minLength={10} placeholder="Ceritakan proyek Anda" onChange={() => formStatus === "error" && setFormStatus("idle")}/><button type="submit" aria-label="Kirim pesan" disabled={formStatus === "sending"}><ArrowUpRight size={18}/></button><span className={`form-status ${formStatus}`} aria-live="polite">{formStatus === "sending" ? "Mengirim pesan…" : formStatus === "sent" ? "Pesan terkirim. Terima kasih." : formStatus === "error" ? "Periksa nama, email, dan pesan (minimal 10 karakter), lalu coba lagi." : ""}</span></form><div className="contact-stamp">FERDI<br/><span>ANSYAH.</span><i>CREATIVE PORTFOLIO</i></div></div></div></section>
+    <section className="contact section-wrap" id="contact" data-tactical-group="contact"><TacticalOrnamentLayer section="contact" /><div className="section-topline" data-reveal><span>05 / HUBUNGI SAYA</span><span>{profile.location.toUpperCase()}</span></div><div className="contact-layout"><div className="contact-body" data-design-target="contact-copy" data-reveal><p className="eyebrow">PUNYA PROYEK?</p><h2>MARI KITA<br/>DISKUSIKAN<span>.</span></h2><p>Saya biasanya merespons dalam 1–2 hari kerja. Jika diperlukan, kita bisa menjadwalkan diskusi terlebih dahulu.</p><a className="contact-button" href={`mailto:${contact.email}`} data-magnetic data-magnetic-max="9" data-cursor="EMAIL">KIRIM EMAIL <ArrowUpRight size={16}/></a><div className="contact-socials">{contact.socials.map((social) => { const Icon = social.name === "GitHub" ? Github : social.name === "YouTube" ? Youtube : Instagram; return <a key={social.name} href={social.href} aria-label={social.name} target="_blank" rel="noreferrer" data-magnetic data-magnetic-max="5" data-cursor={social.name.toUpperCase()}><Icon size={16}/></a>; })}</div></div><div className="contact-right" data-design-target="contact-details"><div className="contact-details" data-reveal><button type="button" className={`contact-copy${copiedEmail ? " is-copied" : ""}`} onClick={copyEmail} aria-label={copiedEmail ? "Alamat email tersalin" : "Salin alamat email"} data-cursor={copiedEmail ? "TERSALIN" : "SALIN"} data-magnetic data-magnetic-max="5"><small>EMAIL {copiedEmail && <em>TERSALIN</em>}</small><strong>{contact.email}</strong>{copiedEmail ? <Check size={14}/> : <Copy size={14}/>}</button><div><small>LOKASI</small><strong>{contact.location}</strong><ArrowUpRight size={14}/></div><div><small>WAKTU RESPONS</small><strong>{contact.responseTime}</strong><ArrowUpRight size={14}/></div></div><form className="contact-form design-pass" onSubmit={sendMessage} noValidate><label htmlFor="contact-name">Nama lengkap</label><input id="contact-name" name="name" required minLength={2} autoComplete="name" placeholder="Nama lengkap" onChange={() => formStatus === "error" && setFormStatus("idle")}/><label htmlFor="contact-email">Email</label><input id="contact-email" name="email" type="email" required autoComplete="email" placeholder="Alamat email" onChange={() => formStatus === "error" && setFormStatus("idle")}/><label htmlFor="project-message">Pesan</label><textarea id="project-message" name="message" required minLength={10} placeholder="Ceritakan proyek Anda" onChange={() => formStatus === "error" && setFormStatus("idle")}/><button type="submit" aria-label="Kirim pesan" disabled={formStatus === "sending"} data-magnetic data-magnetic-max="4" data-cursor="KIRIM"><ArrowUpRight size={18}/></button><span className={`form-status ${formStatus}`} aria-live="polite">{formStatus === "sending" ? "Mengirim pesan…" : formStatus === "sent" ? "Pesan terkirim. Terima kasih." : formStatus === "error" ? "Periksa nama, email, dan pesan (minimal 10 karakter), lalu coba lagi." : ""}</span></form><div className="contact-stamp">FERDI<br/><span>ANSYAH.</span><i>CREATIVE PORTFOLIO</i></div></div></div></section>
     <footer className="footer" data-design-target="footer"><a className="brand" href="#home">FERDIANSYAH<span className="brand-dot">.</span></a><span>VIDEO EDITOR · DESAINER GRAFIS · PROGRAMMER</span><a href="#home" className="back-top" data-magnetic data-magnetic-max="6">KEMBALI KE ATAS ↑</a></footer>
 
-    {selectedProject && <div className="project-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedProject(null); }}><div className="project-modal-panel" role="dialog" aria-modal="true" aria-labelledby="project-modal-title"><button className="project-modal-close" type="button" aria-label="Tutup detail proyek" onClick={() => setSelectedProject(null)}><X size={18}/></button><p className="eyebrow">{categoryLabels[selectedProject.category]} / {selectedProject.year}</p><h2 id="project-modal-title">{selectedProject.title.id}</h2><p className="project-modal-description">{selectedProject.description.id}</p><div className="project-modal-tags">{selectedProject.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="project-modal-gallery">{selectedProject.media.map((media) => media.type === "video" ? <video key={media.src} src={media.src} controls playsInline preload="metadata" /> : <img key={media.src} src={media.src} alt={media.caption} loading="lazy" style={{ objectFit: media.fit ?? "cover" }}/>)}</div>{selectedProject.link && <a className="text-link" href={selectedProject.link} target="_blank" rel="noreferrer">BUKA PROYEK <ArrowUpRight size={14}/></a>}</div></div>}
+    {selectedProject && <div className="project-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedProject(null); }}><div className="project-modal-panel" role="dialog" aria-modal="true" aria-labelledby="project-modal-title"><button className="project-modal-close" type="button" aria-label="Tutup detail proyek" onClick={() => setSelectedProject(null)}><X size={18}/></button><p className="eyebrow">{categoryLabels[selectedProject.category]} / {selectedProject.year}</p><h2 id="project-modal-title">{selectedProject.title.id}</h2><p className="project-modal-description">{selectedProject.description.id}</p><div className="project-modal-tags">{selectedProject.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="project-modal-gallery">{selectedProject.media.map((media) => media.type === "video" ? <video key={media.src} controls playsInline preload="metadata" poster={selectedProject.media.find((item) => item.type === "image")?.src}><source src={mobileVideo(media.src)} media="(max-width: 700px)" type="video/mp4"/><source src={media.src} type="video/mp4"/></video> : <img key={media.src} src={media.src} srcSet={imageSrcSet(media.src)} sizes="(max-width: 600px) 92vw, 45vw" alt={media.caption} loading="lazy" decoding="async" style={{ objectFit: media.fit ?? "cover" }}/>)}</div>{selectedProject.link && <a className="text-link" href={selectedProject.link} target="_blank" rel="noreferrer">BUKA PROYEK <ArrowUpRight size={14}/></a>}</div></div>}
 
   </main>;
 }

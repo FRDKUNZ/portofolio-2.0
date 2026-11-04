@@ -45,6 +45,7 @@ export function createTacticalExperience(reducedMotion: boolean): TacticalExperi
   let phase: "staged" | "ready" | null = null;
   let ambientAllowed = false;
   let destroyed = false;
+  const compact = typeof window !== "undefined" && (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 700);
 
   const track = <T extends gsap.core.Animation>(animation: T) => {
     animations.push(animation);
@@ -121,38 +122,40 @@ export function createTacticalExperience(reducedMotion: boolean): TacticalExperi
       );
     });
 
-    root.querySelectorAll<HTMLElement>("[data-tactical-scan]").forEach((element, index) => {
-      const beam = element.querySelector<HTMLElement>(".tac-scan-beam");
-      const glow = element.querySelector<HTMLElement>(".tac-scan-glow");
-      const markers = element.querySelectorAll<HTMLElement>(".tac-scan-markers i");
-      if (!beam) return;
-      const timeline = gsap.timeline({ repeat: -1, repeatDelay: 2.8 + index * 0.6, delay: 1.1 + index * 0.9 });
-      timeline.fromTo(
-        beam,
-        { top: "-6%", opacity: 0 },
-        { top: "106%", opacity: 0.9, duration: duration.scan, ease: "sine.inOut" },
-      );
-      if (glow) {
+    if (!compact) {
+      root.querySelectorAll<HTMLElement>("[data-tactical-scan]").forEach((element, index) => {
+        const beam = element.querySelector<HTMLElement>(".tac-scan-beam");
+        const glow = element.querySelector<HTMLElement>(".tac-scan-glow");
+        const markers = element.querySelectorAll<HTMLElement>(".tac-scan-markers i");
+        if (!beam) return;
+        const timeline = gsap.timeline({ repeat: -1, repeatDelay: 2.8 + index * 0.6, delay: 1.1 + index * 0.9 });
         timeline.fromTo(
-          glow,
+          beam,
           { top: "-6%", opacity: 0 },
-          { top: "106%", opacity: 0.32, duration: duration.scan, ease: "sine.inOut" },
-          0,
+          { top: "106%", opacity: 0.9, duration: duration.scan, ease: "sine.inOut" },
         );
-      }
-      timeline.to([beam, glow].filter(Boolean), { opacity: 0, duration: 0.6 }, "-=0.6");
-      if (markers.length) {
-        timeline
-          .fromTo(
-            markers,
-            { opacity: 0, scale: 0.6 },
-            { opacity: 1, scale: 1, duration: 0.24, stagger: 0.32, ease: "power2.out" },
-            0.7,
-          )
-          .to(markers, { opacity: 0, duration: 0.4, stagger: 0.16 }, "+=0.5");
-      }
-      track(timeline);
-    });
+        if (glow) {
+          timeline.fromTo(
+            glow,
+            { top: "-6%", opacity: 0 },
+            { top: "106%", opacity: 0.32, duration: duration.scan, ease: "sine.inOut" },
+            0,
+          );
+        }
+        timeline.to([beam, glow].filter(Boolean), { opacity: 0, duration: 0.6 }, "-=0.6");
+        if (markers.length) {
+          timeline
+            .fromTo(
+              markers,
+              { opacity: 0, scale: 0.6 },
+              { opacity: 1, scale: 1, duration: 0.24, stagger: 0.32, ease: "power2.out" },
+              0.7,
+            )
+            .to(markers, { opacity: 0, duration: 0.4, stagger: 0.16 }, "+=0.5");
+        }
+        track(timeline);
+      });
+    }
 
     root.querySelectorAll<HTMLElement>(".tac-timeline-node").forEach((element, index) => {
       const dot = element.querySelector<HTMLElement>("i");

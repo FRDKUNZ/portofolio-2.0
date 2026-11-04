@@ -20,7 +20,7 @@ export const profile = {
     { value: "50+", label: "proyek selesai" },
     { value: "20+", label: "klien puas" },
   ],
-  photo: "/portfolio/profile.jpeg",
+  photo: "/portfolio/profile.webp",
 };
 
 export const skillGroups = [

@@ -425,17 +425,32 @@ export function createExperience(lenis: LenisLike, reducedMotion: boolean): Expe
   const setupCustomCursor = () => {
     if (!finePointer() || reducedMotion) return;
     if (document.querySelector(".site-cursor")) return;
+    const crossSVG =
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><g stroke-linecap="round"><path d="M12 3.5 V20.5 M3.5 12 H20.5" stroke="#fff" stroke-width="3.6"/><path d="M12 3.5 V20.5 M3.5 12 H20.5" stroke="currentColor" stroke-width="1.5"/></g></svg>';
     const cursor = document.createElement("div");
     cursor.className = "site-cursor";
     cursor.setAttribute("aria-hidden", "true");
-    cursor.innerHTML = '<span class="site-cursor-dot"></span><span class="site-cursor-ring"><span class="site-cursor-label"></span></span>';
+    cursor.innerHTML =
+      `<span class="site-cursor-cross site-cursor-cross--c">${crossSVG}</span>` +
+      `<span class="site-cursor-cross site-cursor-cross--b">${crossSVG}</span>` +
+      `<span class="site-cursor-cross site-cursor-cross--lead">${crossSVG}</span>` +
+      '<span class="site-cursor-ring"><span class="site-cursor-label"></span></span>';
     document.body.appendChild(cursor);
     const label = cursor.querySelector<HTMLElement>(".site-cursor-label");
     const ring = cursor.querySelector<HTMLElement>(".site-cursor-ring");
-    const dot = cursor.querySelector<HTMLElement>(".site-cursor-dot");
+    const lead = cursor.querySelector<HTMLElement>(".site-cursor-cross--lead");
+    const ghostB = cursor.querySelector<HTMLElement>(".site-cursor-cross--b");
+    const ghostC = cursor.querySelector<HTMLElement>(".site-cursor-cross--c");
+    if (ghostB) gsap.set(ghostB, { scale: 0.92, rotation: -14 });
+    if (ghostC) gsap.set(ghostC, { scale: 0.82, rotation: 20 });
     const ringXTo = ring ? gsap.quickTo(ring, "x", { duration: 0.56, ease: "power2.out" }) : null;
     const ringYTo = ring ? gsap.quickTo(ring, "y", { duration: 0.56, ease: "power2.out" }) : null;
+    const ghostBXTo = ghostB ? gsap.quickTo(ghostB, "x", { duration: 0.72, ease: "power3.out" }) : null;
+    const ghostBYTo = ghostB ? gsap.quickTo(ghostB, "y", { duration: 0.72, ease: "power3.out" }) : null;
+    const ghostCXTo = ghostC ? gsap.quickTo(ghostC, "x", { duration: 0.9, ease: "power3.out" }) : null;
+    const ghostCYTo = ghostC ? gsap.quickTo(ghostC, "y", { duration: 0.9, ease: "power3.out" }) : null;
     let visible = false;
+    let positioned = false;
     let pointerX = -1;
     let pointerY = -1;
     let moveFrame = 0;
@@ -481,6 +496,15 @@ export function createExperience(lenis: LenisLike, reducedMotion: boolean): Expe
       if (ring) {
         gsap.to(ring, { scale: ringScale(target), duration: 0.3, ease: "power2.out", overwrite: "auto" });
       }
+      if (lead) {
+        gsap.to(lead, { rotate: target ? 45 : 0, scale: target ? 1.16 : 1, duration: 0.3, ease: "power2.out", overwrite: "auto" });
+      }
+      if (ghostB) {
+        gsap.to(ghostB, { rotate: target ? 30 : -14, duration: 0.34, ease: "power2.out", overwrite: "auto" });
+      }
+      if (ghostC) {
+        gsap.to(ghostC, { rotate: target ? -34 : 20, duration: 0.4, ease: "power2.out", overwrite: "auto" });
+      }
     };
 
     const scheduleTarget = () => {
@@ -490,9 +514,19 @@ export function createExperience(lenis: LenisLike, reducedMotion: boolean): Expe
 
     const flushMove = () => {
       moveFrame = 0;
-      if (dot) gsap.set(dot, { x: pointerX, y: pointerY });
+      if (!positioned) {
+        positioned = true;
+        if (ring) gsap.set(ring, { x: pointerX, y: pointerY });
+        if (ghostB) gsap.set(ghostB, { x: pointerX, y: pointerY });
+        if (ghostC) gsap.set(ghostC, { x: pointerX, y: pointerY });
+      }
+      if (lead) gsap.set(lead, { x: pointerX, y: pointerY });
       ringXTo?.(pointerX);
       ringYTo?.(pointerY);
+      ghostBXTo?.(pointerX);
+      ghostBYTo?.(pointerY);
+      ghostCXTo?.(pointerX);
+      ghostCYTo?.(pointerY);
       show();
       scheduleTarget();
     };
@@ -507,10 +541,14 @@ export function createExperience(lenis: LenisLike, reducedMotion: boolean): Expe
     const onDown = () => {
       cursor.classList.add("is-pressed");
       if (ring) gsap.to(ring, { scale: 0.82, duration: 0.14, ease: "power2.out", overwrite: "auto" });
+      if (lead) gsap.to(lead, { scale: 0.78, duration: 0.14, ease: "power2.out", overwrite: "auto" });
     };
     const onUp = () => {
       cursor.classList.remove("is-pressed");
       if (ring) gsap.to(ring, { scale: ringScale(activeTarget), duration: 0.28, ease: "power3.out", overwrite: "auto" });
+      if (lead) {
+        gsap.to(lead, { scale: activeTarget ? 1.16 : 1, duration: 0.28, ease: "power3.out", overwrite: "auto" });
+      }
     };
     const onLeaveWindow = (event: MouseEvent) => {
       if (!event.relatedTarget) hide();
